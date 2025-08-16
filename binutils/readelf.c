@@ -164,6 +164,7 @@
 #include "elf/xtensa.h"
 #include "elf/z80.h"
 #include "elf/loongarch.h"
+#include "elf/i51.h"
 
 #include "getopt.h"
 #include "libiberty.h"
@@ -1075,6 +1076,7 @@ guess_is_rela (unsigned int e_machine)
     case EM_H8S:
     case EM_H8_300:
     case EM_H8_300H:
+    case EM_I51:
     case EM_IA_64:
     case EM_IP2K:
     case EM_IP2K_OLD:
@@ -1924,6 +1926,9 @@ dump_relocations (Filedata *          filedata,
 	  rtype = elf_loongarch_reloc_type (type);
 	  break;
 
+	case EM_I51:
+		rtype = elf_i51_reloc_type (type);
+		break;
 	}
 
       if (rtype == NULL)
@@ -2999,6 +3004,7 @@ get_machine_name (unsigned e_machine)
     case EM_ADAPTEVA_EPIPHANY:	return "Adapteva EPIPHANY";
     case EM_CYGNUS_FRV:		return "Fujitsu FR-V";
     case EM_S12Z:               return "Freescale S12Z";
+    case EM_I51:		return "MCS-51 8-bit microcontroller";
 
     default:
       snprintf (buff, sizeof (buff), _("<unknown>: 0x%x"), e_machine);

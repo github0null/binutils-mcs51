@@ -1933,6 +1933,8 @@ enum bfd_architecture
   bfd_arch_loongarch,       /* LoongArch */
 #define bfd_mach_loongarch32   1
 #define bfd_mach_loongarch64   2
+  bfd_arch_i51,       /* I51 microcontrollers */
+#define bfd_mach_i51      1
   bfd_arch_last
   };
 
@@ -6310,6 +6312,17 @@ assembler and not (currently) written to any object files.  */
   BFD_RELOC_LARCH_SUB24,
   BFD_RELOC_LARCH_SUB32,
   BFD_RELOC_LARCH_SUB64,
+
+/* MCS-51 Relocations.  */
+  BFD_RELOC_I51_R1,
+  BFD_RELOC_I51_R3,
+  BFD_RELOC_I51_7_PCREL,
+  BFD_RELOC_I51_11,
+  BFD_RELOC_I51_8_BIT,
+  BFD_RELOC_I51_8_LOW,
+  BFD_RELOC_I51_8_HIGH,
+  BFD_RELOC_I51_8_B2B,
+  BFD_RELOC_I51_13_PCODE,
   BFD_RELOC_UNUSED };
 
 typedef enum bfd_reloc_code_real bfd_reloc_code_real_type;

@@ -4752,7 +4752,7 @@ emit_expr_fix (expressionS *exp, unsigned int nbytes, fragS *frag, char *p,
   /* Generate a fixS to record the symbol value.  */
 
 #ifdef TC_CONS_FIX_NEW
-  TC_CONS_FIX_NEW (frag, p - frag->fr_literal + offset, size, exp, r);
+  TC_CONS_FIX_NEW (frag, p - frag->fr_literal + offset, size, exp);
 #else
   if (r != TC_PARSE_CONS_RETURN_NONE)
     {

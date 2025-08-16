@@ -559,6 +559,8 @@ DESCRIPTION
 .  bfd_arch_loongarch,       {* LoongArch *}
 .#define bfd_mach_loongarch32	1
 .#define bfd_mach_loongarch64	2
+.  bfd_arch_i51,       {* I51 microcontrollers *}
+.#define bfd_mach_i51      1
 .  bfd_arch_last
 .  };
 */
@@ -632,6 +634,7 @@ extern const bfd_arch_info_type bfd_frv_arch;
 extern const bfd_arch_info_type bfd_h8300_arch;
 extern const bfd_arch_info_type bfd_hppa_arch;
 extern const bfd_arch_info_type bfd_i386_arch;
+extern const bfd_arch_info_type bfd_i51_arch;
 extern const bfd_arch_info_type bfd_iamcu_arch;
 extern const bfd_arch_info_type bfd_ia64_arch;
 extern const bfd_arch_info_type bfd_ip2k_arch;
@@ -722,6 +725,7 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_h8300_arch,
     &bfd_hppa_arch,
     &bfd_i386_arch,
+    &bfd_i51_arch,
     &bfd_iamcu_arch,
     &bfd_ia64_arch,
     &bfd_ip2k_arch,

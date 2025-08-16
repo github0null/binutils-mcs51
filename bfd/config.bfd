@@ -196,6 +196,7 @@ dlx*)		 targ_archs=bfd_dlx_arch ;;
 fido*)		 targ_archs=bfd_m68k_arch ;;
 hppa*)		 targ_archs=bfd_hppa_arch ;;
 i[3-7]86)	 targ_archs=bfd_i386_arch ;;
+i51)		 targ_archs=bfd_i51_arch ;;
 ia16)		 targ_archs=bfd_i386_arch ;;
 lm32)	         targ_archs=bfd_lm32_arch ;;
 loongarch*)	 targ_archs=bfd_loongarch_arch ;;
@@ -1458,6 +1459,10 @@ case "${targ}" in
   z8k*-*-*)
     targ_defvec=z8k_coff_vec
     targ_underscore=yes
+    ;;
+
+  i51-*-*)
+    targ_defvec=i51_elf32_vec
     ;;
 
 #ifdef BFD64

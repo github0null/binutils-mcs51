@@ -162,6 +162,7 @@ TARGET32_LIBOPCODES_CFILES = \
 	hppa-dis.c \
 	i386-dis.c \
 	i386-opc.c \
+	i51-dis.c \
 	ip2k-asm.c \
 	ip2k-desc.c \
 	ip2k-dis.c \

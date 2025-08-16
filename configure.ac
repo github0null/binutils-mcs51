@@ -2579,6 +2579,9 @@ extra_nmflags_for_target=
 extra_ranlibflags_for_target=
 target_makefile_frag=/dev/null
 case "${target}" in
+  i51*)
+    target_makefile_frag="config/mt-i51"
+    ;;
   spu-*-*)
     target_makefile_frag="config/mt-spu"
     ;;

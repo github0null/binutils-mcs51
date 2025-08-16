@@ -1281,6 +1281,7 @@ case $cpu-$vendor in
 			| x86 | x86_64 | xc16x | xgate | xps100 \
 			| xstormy16 | xtensa* \
 			| ymp \
+			| i51 \
 			| z8k | z80)
 				;;
 
