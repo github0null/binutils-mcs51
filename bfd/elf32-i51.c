@@ -36,7 +36,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 //static reloc_howto_type *bfd_elf32_bfd_reloc_type_lookup
 //  PARAMS ((bfd *abfd, bfd_reloc_code_real_type code));
-static void i51_info_to_howto_rela(bfd *, arelent *, Elf_Internal_Rela *);
+static bool i51_info_to_howto_rela(bfd *, arelent *, Elf_Internal_Rela *);
 static asection *elf32_i51_gc_mark_hook(asection *, struct bfd_link_info *,
 		Elf_Internal_Rela *, struct elf_link_hash_entry *, Elf_Internal_Sym *);
 static bool elf32_i51_gc_sweep_hook(bfd *, struct bfd_link_info *, 
@@ -45,9 +45,9 @@ static bool elf32_i51_check_relocs(bfd *, struct bfd_link_info *, asection *,
 	   const Elf_Internal_Rela *);
 static bfd_reloc_status_type i51_final_link_relocate(reloc_howto_type *, bfd *, asection *, bfd_byte *,
 	   Elf_Internal_Rela *, bfd_vma);
-static bool elf32_i51_relocate_section(bfd *, struct bfd_link_info *, bfd *, asection *, bfd_byte *,
+static int elf32_i51_relocate_section(bfd *, struct bfd_link_info *, bfd *, asection *, bfd_byte *,
 	   Elf_Internal_Rela *, Elf_Internal_Sym *, asection **);
-static void bfd_elf_i51_final_write_processing(bfd *, bool);
+static bool bfd_elf_i51_final_write_processing(bfd *, bool);
 static bool elf32_i51_object_p(bfd *);
 void elf32_i51_symbol_processing(bfd *, asymbol *);
 bool elf32_i51_section_from_bfd_section(bfd *, asection *, int *);
@@ -327,7 +327,7 @@ i51_elf32_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
 
 /* Set the howto pointer for an I51 ELF reloc.  */
 
-static void
+static bool
 i51_info_to_howto_rela (bfd *abfd ATTRIBUTE_UNUSED, 
 	arelent *cache_ptr, Elf_Internal_Rela *dst)
 {
@@ -336,6 +336,8 @@ i51_info_to_howto_rela (bfd *abfd ATTRIBUTE_UNUSED,
   r_type = ELF32_R_TYPE (dst->r_info);
   BFD_ASSERT (r_type < (unsigned int) R_I51_max);
   cache_ptr->howto = &elf_i51_howto_table[r_type];
+
+  return true;
 }
 
 static asection *
@@ -575,7 +577,7 @@ i51_final_link_relocate (reloc_howto_type *                 howto,
 #endif
 #if 1
 /* Relocate an I51 ELF section.  */
-static bool
+static int
 elf32_i51_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
                             struct bfd_link_info *info,
                             bfd *input_bfd,
@@ -855,7 +857,7 @@ elf32_i51_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
    file.  This gets the I51 architecture right based on the machine
    number.  */
 
-static void
+static bool
 bfd_elf_i51_final_write_processing (bfd *abfd,
 	bool linker ATTRIBUTE_UNUSED)
 {
@@ -863,6 +865,8 @@ bfd_elf_i51_final_write_processing (bfd *abfd,
 
   elf_elfheader (abfd)->e_machine = EM_I51;
   elf_elfheader (abfd)->e_flags |= bfd_mach_i51;
+
+  return true;
 }
 
 /* Set the right machine number.  */

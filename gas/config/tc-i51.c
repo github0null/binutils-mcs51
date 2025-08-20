@@ -609,6 +609,7 @@ md_parse_option (int c, const char *arg)
           //    current_isa = I51_SCR;
            else
              {
+               printf("invalid -m options: '%s'", arg);
                return 0;
              }
            default:
@@ -2779,73 +2780,80 @@ TC_PARSE_CONS_RETURN_TYPE
 i51_parse_cons_expression (expressionS *exp, int nbytes)
 {
   char *tmp;
+  char pm_name[10];
+  int len;
+
   exp_mod = exp_mod_none;
 
   tmp = input_line_pointer = skip_space (input_line_pointer);
 //  fprintf(stderr,"-->%.20s<--\n",input_line_pointer);
-      char pm_name[10];
-      strcpy(&pm_name[0],"lo_");
-      int len;
-      len = strlen (pm_name);
-      if (strncasecmp (input_line_pointer, &pm_name[0], len) == 0)
+  strcpy(&pm_name[0],"lo_");
+  len = strlen (pm_name);
+  if (strncasecmp (input_line_pointer, &pm_name[0], len) == 0)
+    {
+      input_line_pointer = skip_space (input_line_pointer + len);
+      if (*input_line_pointer == '(')
         {
-          input_line_pointer = skip_space (input_line_pointer + len);
-          if (*input_line_pointer == '(')
-            {
-              input_line_pointer = skip_space (input_line_pointer + 1);
-              exp_mod = exp_mod_lo_label;
+          input_line_pointer = skip_space (input_line_pointer + 1);
+          exp_mod = exp_mod_lo_label;
 //              fprintf(stderr,"Generate Expression Begin lo_\n");
-              expression (exp);
+          expression (exp);
 //              fprintf(stderr,"Exp %x %d\n",exp->X_add_number,exp->X_op);
-              if (exp->X_op==O_constant) { exp->X_add_number&=0xFF; exp_mod=exp_mod_lo_const; }
+          if (exp->X_op==O_constant) { 
+            exp->X_add_number&=0xFF;
+            exp_mod=exp_mod_lo_const;
+          }
 //              fprintf(stderr,"New Exp %x %d\n",exp->X_add_number,exp->X_op);
 //              fprintf(stderr,"Generate Expression End lo_\n");
-              if (*input_line_pointer == ')')
-                ++input_line_pointer;
-              else
-                {
-                  as_bad (_("`)' required"));
-                  exp_mod = exp_mod_none;
-                }
-              return exp_mod;
-            }
-          input_line_pointer = tmp;
-        }
-      strcpy(&pm_name[0],"hi_");
-      len = strlen (pm_name);
-      if (strncasecmp (input_line_pointer, &pm_name[0], len) == 0)
-        {
-          input_line_pointer = skip_space (input_line_pointer + len);
-          if (*input_line_pointer == '(')
+          if (*input_line_pointer == ')')
+            ++input_line_pointer;
+          else
             {
-              input_line_pointer = skip_space (input_line_pointer + 1);
-              exp_mod = exp_mod_hi_label;
+              as_bad (_("`)' required"));
+              exp_mod = exp_mod_none;
+            }
+          return exp_mod;
+        }
+      input_line_pointer = tmp;
+    }
+  strcpy(&pm_name[0],"hi_");
+  len = strlen (pm_name);
+  if (strncasecmp (input_line_pointer, &pm_name[0], len) == 0)
+    {
+      input_line_pointer = skip_space (input_line_pointer + len);
+      if (*input_line_pointer == '(')
+        {
+          input_line_pointer = skip_space (input_line_pointer + 1);
+          exp_mod = exp_mod_hi_label;
 //              fprintf(stderr,"Generate Expression Begin hi_\n");
-              expression (exp);
+          expression (exp);
 //              fprintf(stderr,"Exp %x %d\n",exp->X_add_number,exp->X_op);
-              if (exp->X_op==O_constant) { exp->X_add_number=exp->X_add_number >> 8; exp_mod=exp_mod_hi_const; }
+          if (exp->X_op==O_constant) {
+            exp->X_add_number=exp->X_add_number >> 8;
+            exp_mod=exp_mod_hi_const;
+          }
 //              fprintf(stderr,"New Exp %x %d\n",exp->X_add_number,exp->X_op);
 //              fprintf(stderr,"Generate Expression End hi_\n");
-              if (*input_line_pointer == ')')
-                ++input_line_pointer;
-              else
-                {
-                  as_bad (_("`)' required"));
-                  exp_mod = exp_mod_none;
-                }
-              return exp_mod;
+          if (*input_line_pointer == ')')
+            ++input_line_pointer;
+          else
+            {
+              as_bad (_("`)' required"));
+              exp_mod = exp_mod_none;
             }
-          input_line_pointer = tmp;
+          return exp_mod;
         }
-      //remove the #
-      if (*input_line_pointer=='#')
-        {
-          ++input_line_pointer;
-        }
+      input_line_pointer = tmp;
+    }
+  //remove the #
+  if (*input_line_pointer=='#')
+    {
+      ++input_line_pointer;
+    }
 //  fprintf(stderr,"Generate Expression Begin \n");
   expression (exp);
 //  fprintf(stderr,"Generate Expression End \n");
-    return exp_mod;
+  return exp_mod;
 }
 
 fixS *
