@@ -905,7 +905,7 @@ md_apply_fix (fixS *fixp, valueT *valuep, segT seg)
 	}
     }
 #endif
-  unsigned char *where;
+  void *where;
   unsigned long insn;
   long value = *valuep;
 
@@ -1602,9 +1602,7 @@ i51_build_ins (
 
 /* Checks that the number 'num' fits for a given mode.  */
 static int
-check_range (num, mode)
-     long num;
-     int mode;
+check_range (long num, int mode)
 {
   switch (mode)
     {
@@ -1635,10 +1633,10 @@ check_range (num, mode)
 /* Put a 1 byte expression described by 'oper'.  If this expression contains
    unresolved symbols, generate an 8-bit fixup.  */
 static void
-fixup8 (oper, mode, opmode)
-     expressionS *oper;
-     int mode;
-     int opmode;
+fixup8 (
+     expressionS *oper,
+     int mode,
+     int opmode)
 {
   char *f;
 
@@ -2857,17 +2855,18 @@ i51_parse_cons_expression (expressionS *exp, int nbytes)
 }
 
 fixS *
-i51_fix_new_exp (frag, where, size, exp, pcrel, r_type)
-     fragS *frag;               /* Which frag?  */
-     int where;                 /* Where in that frag?  */
-     int size;                  /* 1, 2, or 4 usually.  */
-     expressionS *exp;          /* Expression.  */
-     int pcrel;                 /* TRUE if PC-relative relocation.  */
+i51_fix_new_exp (
+     fragS *frag,               /* Which frag?  */
+     int where,                 /* Where in that frag?  */
+     int size,                  /* 1, 2, or 4 usually.  */
+     expressionS *exp,          /* Expression.  */
+     int pcrel,                 /* TRUE if PC-relative relocation.  */
 #ifdef BFD_ASSEMBLER
-     bfd_reloc_code_real_type r_type; /* Relocation type.  */
+     bfd_reloc_code_real_type r_type /* Relocation type.  */
 #else
-     int r_type;                /* Relocation type.  */
+     int r_type                /* Relocation type.  */
 #endif
+)
 {
   symbolS *add = NULL;
   symbolS *sub = NULL;

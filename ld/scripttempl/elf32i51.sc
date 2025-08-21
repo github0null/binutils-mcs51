@@ -4,6 +4,8 @@ OUTPUT_ARCH(${ARCH})
 
 ENTRY(_reset_handler)
 
+PROVIDE(___sdcc_external_startup = 0x0000);
+
 PHDRS
 {
   phdr_code PT_LOAD FLAGS(0x5); /* Read + Execute */
