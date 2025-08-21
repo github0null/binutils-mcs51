@@ -515,6 +515,11 @@ disassembler (enum bfd_architecture a,
 	disassemble = print_insn_z8002;
       break;
 #endif
+#ifdef ARCH_i51
+    case bfd_arch_i51:
+      disassemble = print_insn_i51;
+      break;
+#endif
 #ifdef ARCH_vax
     case bfd_arch_vax:
       disassemble = print_insn_vax;

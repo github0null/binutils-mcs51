@@ -43,9 +43,7 @@ struct i51_opcodes_s i51_opcodes[] =
 };
 
 static unsigned char
-i51dis_opcode (addr, info)
-     bfd_vma addr;
-     disassemble_info *info;
+i51dis_opcode (bfd_vma addr, disassemble_info *info)
 {
   bfd_byte buffer[1];
   int status;
@@ -59,9 +57,7 @@ i51dis_opcode (addr, info)
 }
 
 static unsigned short
-i51dis_op16 (addr, info)
-     bfd_vma addr;
-     disassemble_info *info;
+i51dis_op16 (bfd_vma addr, disassemble_info *info)
 {
   bfd_byte buffer[2];
   int status;
@@ -74,10 +70,7 @@ i51dis_op16 (addr, info)
   return bfd_getb16(buffer);
 }
 
-int
-print_insn_i51(addr, info)
-     bfd_vma addr;
-     disassemble_info *info;
+int print_insn_i51(bfd_vma addr, disassemble_info *info)
 {
   unsigned int insn;
   unsigned int opdata;

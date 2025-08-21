@@ -2,22 +2,25 @@ cat <<EOF
 OUTPUT_FORMAT("${OUTPUT_FORMAT}","${OUTPUT_FORMAT}","${OUTPUT_FORMAT}")
 OUTPUT_ARCH(${ARCH})
 
-ENTRY(_start)
+ENTRY(_reset_handler)
 
 PHDRS
 {
-  code PT_LOAD FLAGS(0x5); /* Read + Execute */
-  data PT_LOAD FLAGS(0x6); /* Read + Write */
+  phdr_code PT_LOAD FLAGS(0x5); /* Read + Execute */
+  phdr_data PT_LOAD FLAGS(0x6); /* Read + Write */
 }
 
 MEMORY
 {
-  text   (rx)   : ORIGIN = 0, LENGTH = DEFINED(__FLASH_SIZE__) ? __FLASH_SIZE__ : 8K
-  bit    (rw!x) : ORIGIN = 0, LENGTH = 0x80
-  data   (rw!x) : ORIGIN = 0, LENGTH = $DATA_LENGTH
-  xdata  (rw!x) : ORIGIN = 0, LENGTH = DEFINED(__XDATA_SIZE__) ? __XDATA_SIZE__ : 0
-  eeprom (rw!x) : ORIGIN = 0, LENGTH = DEFINED(__EEPROM_SIZE__) ? __EEPROM_SIZE__ : 0
+  FLASH   (rx)   : ORIGIN = 0, LENGTH = DEFINED(__FLASH_SIZE__) ? __FLASH_SIZE__ : 8K
+  IDATA   (rw!x) : ORIGIN = 0, LENGTH = DEFINED(__IDATA_SIZE__) ? __IDATA_SIZE__ : 128
+  XDATA   (rw!x) : ORIGIN = 0, LENGTH = DEFINED(__XDATA_SIZE__) ? __XDATA_SIZE__ : 0
+  EEPROM  (rw!x) : ORIGIN = 0, LENGTH = DEFINED(__EPROM_SIZE__) ? __EPROM_SIZE__ : 0
 }
+
+/* end_addr -1 make sure the address always <= 65535 */
+__idata_end = (LENGTH(IDATA) > 0) ? (LENGTH(IDATA) - 1) : 0;
+__xdata_end = (LENGTH(XDATA) > 0) ? (LENGTH(XDATA) - 1) : 0;
 
 SECTIONS
 {
@@ -85,126 +88,81 @@ SECTIONS
 
   .text :
   {
-    *(.init)
+    _reset_handler = . ;
+    KEEP(*(.interrupt_vectors))
+    KEEP(*(.init.0))
+    KEEP(*(.init.1))
+    KEEP(*(.init.2))
+    KEEP(*(.init.3))
     *(.progmem.gcc*)
     *(.progmem*)
     *(.text)
     *(.text.*)
     *(.fini)
     ${RELOCATING+ _etext = . ; }
-  } ${RELOCATING+ > text} :code
+  } ${RELOCATING+ > FLASH} :phdr_code
 
-  .reg	${RELOCATING+ 0} :
-     ${RELOCATING+ AT (ADDR (.text) + SIZEOF (.text))}
-  {
-    *(.regbank)
-    ${RELOCATING+ PROVIDE (__reg_start = .) ; }
-    *(.rdata*)
-    ${RELOCATING+ PROVIDE (__reg_end = .) ; }
-  } ${RELOCATING+ > data}
+  /*
+    - [.reg        ] 00-1F   - 32 bytes to hold up to 4 banks of the registers R0 to R7,
+    - [.bitdata ...] 20-2F   - 16 bytes to hold 128 bit variables and,
+    - [.data       ] 30-7F   - 80 bytes for general purpose use.
+  */
 
-  .rbss	${RELOCATING+ SIZEOF(.reg)} :
+  .bdata ${RELOCATING+ 0x20} (NOLOAD):
   {
-    ${RELOCATING+ PROVIDE (__rbss_start = .) ; }
-    *(.rbss*)
-    ${RELOCATING+ PROVIDE (__rbss_end = .) ; }
-  } ${RELOCATING+ > data}
-
-  .bdata ${RELOCATING+ ((MAX (0x20, ( SIZEOF(.rbss) + ADDR(.rbss)))))} :
-  {
-    ${RELOCATING+ PROVIDE (__bdata_start = .) ; }
-    *(.bdata*)
-    ${RELOCATING+ PROVIDE (__bdata_end = .) ; }
-  } ${RELOCATING+ > data}
-
-  .bbss	${RELOCATING+ (SIZEOF(.bdata) + ADDR(.bdata))} :
-  {
-    ${RELOCATING+ PROVIDE (__bbss_start = .) ; }
-    *(.bbss*)
-    ${RELOCATING+ PROVIDE (__bbss_end = .) ; }
-  } ${RELOCATING+ > data}
-
-  .bit	${RELOCATING+ ((((SIZEOF(.bbss) + ADDR(.bbss)) - 0x20) * 8 ))} :
-  {
-    ${RELOCATING+ PROVIDE (__bit_start = .) ; }
     *(.bitdata*)
-    ${RELOCATING+ PROVIDE (__bit_end = .) ; }
-  } ${RELOCATING+ > bit}
+    *(.bdata*)
+  } ${RELOCATING+ > IDATA}
 
-  .bitbss ${RELOCATING+ SIZEOF(.bit) + ADDR(.bit)} :
+  .bbss	${RELOCATING+ (SIZEOF(.bdata) + ADDR(.bdata))} (NOLOAD):
   {
     ${RELOCATING+ PROVIDE (__bbss_start = .) ; }
     *(.bitbss*)
+    *(.bbss*)
     ${RELOCATING+ PROVIDE (__bbss_end = .) ; }
-  } ${RELOCATING+ > bit}
+  } ${RELOCATING+ > IDATA}
 
-  .data	${RELOCATING+ (((SIZEOF(.bit) + SIZEOF(.bitbss) + 7) / 8) + SIZEOF(.bbss) + ADDR(.bbss))} :
+  ASSERT (__bbss_end <= 0x2F, "bit data region overflowed.")
+
+  .data	${RELOCATING+ (SIZEOF(.bbss) + ADDR(.bbss))} (NOLOAD):
   {
-    ${RELOCATING+ PROVIDE (__data_start = .) ; }
-    *(.data)
+    *(.data*)
     *(.gnu.linkonce.d*)
-    ${RELOCATING+ PROVIDE (__data_end = .) ; }
-  } ${RELOCATING+ > data}
+  } ${RELOCATING+ > IDATA}
 
-  .bss ${RELOCATING+ SIZEOF(.data) + ADDR(.data)} :
+  .bss ${RELOCATING+ (SIZEOF(.data) + ADDR(.data))} (NOLOAD):
   {
-    ${RELOCATING+ PROVIDE (__bss_start = .) ; }
     *(.bss*)
     *(COMMON)
-    ${RELOCATING+ PROVIDE (__bss_end = .) ; }
-  } ${RELOCATING+ > data}
+  } ${RELOCATING+ > IDATA}
 
-  .idata ${RELOCATING+ SIZEOF(.bss) + ADDR(.bss)} :
+  .idata ${RELOCATING+ (SIZEOF(.bss) + ADDR(.bss))} (NOLOAD):
   {
-    ${RELOCATING+ PROVIDE (__idata_start = .) ; }
-    *(.idata)
-    ${RELOCATING+ PROVIDE (__idata_end = .) ; }
-  } ${RELOCATING+ > data}
+    *(.idata*)
+  } ${RELOCATING+ > IDATA}
 
-  .ibss ${RELOCATING+ SIZEOF(.idata) + ADDR(.idata)} :
+  .ibss ${RELOCATING+ (SIZEOF(.idata) + ADDR(.idata))} (NOLOAD):
   {
-    ${RELOCATING+ PROVIDE (__ibss_start = .) ; }
-    *(.ibss)
-    ${RELOCATING+ PROVIDE (__ibss_end = .) ; }
-    ${RELOCATING+ PROVIDE (stack = .) ; }
-  } ${RELOCATING+ > data}
+    *(.ibss*)
+    ${RELOCATING+ PROVIDE (__start__stack = .) ; }
+    *(.stack)
+  } ${RELOCATING+ > IDATA}
 
-  .xdata ${RELOCATING-0}:
+  .xdata ${RELOCATING+ 0} (NOLOAD):
   {
-    ${RELOCATING+ PROVIDE (__xdata_start = .) ; }
+    *(.pdata*)
     *(.xdata*)
-    ${RELOCATING+ PROVIDE (__xdata_end = .) ; }
-  } ${RELOCATING+ > xdata}
+  } ${RELOCATING+ > XDATA}
 
-  .ixdata ${RELOCATING+ SIZEOF(.xdata)}:
+  .xbss ${RELOCATING+ SIZEOF(.xdata)} (NOLOAD):
   {
-    ${RELOCATING+ PROVIDE (__ixdata_start = .) ; }
     *(.xbss*)
-    ${RELOCATING+ PROVIDE (__ixdata_end = .) ; }
-  } ${RELOCATING+ > xdata}
+  } ${RELOCATING+ > XDATA}
 
-/* edata means: 0x0000..0xFFFF optional onchip "external" memory, movx addressable
-   perhaps this is unnecessary (we have xdata). so block it for now.
-  .edata ${RELOCATING-0}:
+  .eeprom ${RELOCATING+ 0} (NOLOAD):
   {
-    ${RELOCATING+ PROVIDE (__edata_start = .) ; }
-    *(.edata*)
-    ${RELOCATING+ PROVIDE (__edata_end = .) ; }
-  } ${RELOCATING+ > edata}
-
-  .iedata ${RELOCATING+ SIZEOF(.edata)}:
-  {
-    ${RELOCATING+ PROVIDE (__iedata_start = .) ; }
-    *(.ebss*)
-    ${RELOCATING+ PROVIDE (__iedata_end = .) ; }
-  } ${RELOCATING+ > edata}
-*/
-  .eeprom ${RELOCATING-0}:
-  {
-    ${RELOCATING+ PROVIDE (__eeprom_start = .) ; }
     *(.eeprom*)
-    ${RELOCATING+ PROVIDE (__eeprom_end = .) ; }
-  } ${RELOCATING+ > eeprom}
+  } ${RELOCATING+ > EEPROM}
 
   /* Stabs debugging sections.  */
   .stab 0 : { *(.stab) }
