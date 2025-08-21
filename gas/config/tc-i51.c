@@ -622,8 +622,8 @@ return 1;
 void
 md_begin (void)
 {
-  struct i51_opcodes_s *opcode;
-  struct i51_directop_s *oper;
+  struct i51_opcodes_s *t_opcode;
+  struct i51_directop_s *t_oper;
   if (current_isa==0)
     {
       as_bad (_("no -m option set -mmcs51"));
@@ -635,15 +635,17 @@ md_begin (void)
   /* Insert unique names into hash table.  This hash table then provides a
      quick index to the first opcode with a particular name in the opcode
      table.  */
-  for (opcode = i51_opcodes; opcode->name; opcode++)
+  for (t_opcode = i51_opcodes; t_opcode->name; t_opcode++)
     {
-    if ((current_isa & opcode->machine) !=0) str_hash_insert (i51_hash, opcode->name, (char *) opcode, 0);
+      if ((current_isa & t_opcode->machine) != 0)
+        str_hash_insert (i51_hash, t_opcode->name, (char *) t_opcode, 0);
     }
   /* Insert unique names into hash table.  This hash table then provides a
      quick index to the operand table.  */
-  for (oper = i51_directop; oper->op; oper++)
+  for (t_oper = i51_directop; t_oper->op; t_oper++)
     {
-      if (current_isa==oper->machine) str_hash_insert (i51_operand, oper->op, (char *) oper, 0);
+      if (current_isa == t_oper->machine)
+        str_hash_insert (i51_operand, t_oper->op, (char *) t_oper, 0);
     }
   /* We must construct a fake section similar to bfd_com_section
      but with the name .regbank.  */
@@ -832,7 +834,7 @@ valueT
 md_section_align (asection *seg, valueT addr)
 {
   int align = bfd_section_alignment(seg);
-  return ((addr + (1 << align) - 1) & (-1 << align));
+  return ((addr + (1 << align) - 1) & ((unsigned long)-1 << align));
 }
 
 /* If you define this macro, it should return the offset between the
@@ -1487,17 +1489,17 @@ i51_parse_operand2 (void)
 
 void
 i51_build_ins (
-  struct i51_opcodes_s *opcode,
+  struct i51_opcodes_s *opcode_in,
   unsigned char regnumber,
-  expressionS *op_expr1,
-  expressionS *op_expr2)
+  expressionS *expr1,
+  expressionS *expr2)
 {
   unsigned char bin_opcode;
   char *frag;
 
-  bin_opcode = opcode->bin_opcode;
+  bin_opcode = opcode_in->bin_opcode;
   /* place register operand to instruction code */
-  switch (opcode->mreloc) {
+  switch (opcode_in->mreloc) {
   case 'I':			// register indirect            - IIIIIIIr
   case 'i':			// reg. indirect, data          - IIIIIIIr dddddddd
   case 'X':			// reg. indirect, r. jump 8 bit - IIIIIIIr dddddddd aaaaaaaa
@@ -1515,7 +1517,7 @@ i51_build_ins (
     break;
   }
 
-  switch (opcode->mreloc) {
+  switch (opcode_in->mreloc) {
   case '7':			//relative jump 8 bit          - IIIIIIII aaaaaaaa
   case 'W':			//register, rel. jump 8 bit    - IIIIIrrr aaaaaaaa
   case '1':			//jump 11 bit                  - aaaIIIII aaaaaaaa
@@ -1529,7 +1531,7 @@ i51_build_ins (
     break;
   }
 
-  switch (opcode->mreloc) {
+  switch (opcode_in->mreloc) {
   case 'N':			//none                - IIIIIIII
   case 'I':			//register indirect   - IIIIIIIr
   case 'R':			//register            - IIIIIrrr
@@ -1542,45 +1544,45 @@ i51_build_ins (
   case 'r':			//register,data                - IIIIIrrr dddddddd
     frag = frag_more (1);
     number_to_chars_bigendian (frag, bin_opcode, 1);
-    fixup8 (op_expr1, I51_OP_IMM8, op1hlmode);
+    fixup8 (expr1, I51_OP_IMM8, op1hlmode);
     break;
 
   case '7':			//relative jump 8 bit          - IIIIIIII aaaaaaaa
   case 'W':			//register, rel. jump 8 bit    - IIIIIrrr aaaaaaaa
     frag = frag_more (1);
     number_to_chars_bigendian (frag, bin_opcode, 1);
-    fixup8 (op_expr1, I51_OP_JUMP_REL, 0);
+    fixup8 (expr1, I51_OP_JUMP_REL, 0);
     break;
 
   case '1':			//jump 11 bit                  - aaaIIIII aaaaaaaa
-    fixup11(op_expr1, bin_opcode, I51_OP_JUMP_INPAGE, 0);
+    fixup11(expr1, bin_opcode, I51_OP_JUMP_INPAGE, 0);
     break;
 
   case 'B':			//bitdata 8 bit                - IIIIIIII bbbbbbbb
     frag = frag_more (1);
     number_to_chars_bigendian (frag, bin_opcode, 1);
-    fixup8 (op_expr1, I51_OP_BIT, op1hlmode);
+    fixup8 (expr1, I51_OP_BIT, op1hlmode);
     break;
 
   case 'd':			//data,data 8 bit              - IIIIIIII dddddddd dddddddd
     frag = frag_more (1);
     number_to_chars_bigendian (frag, bin_opcode, 1);
-    fixup8 (op_expr2, I51_OP_IMM8, op2hlmode);
-    fixup8 (op_expr1, I51_OP_IMM8, op1hlmode);
+    fixup8 (expr2, I51_OP_IMM8, op2hlmode);
+    fixup8 (expr1, I51_OP_IMM8, op1hlmode);
     break;
 
   case 'a':			//adr,data 8 bit               - IIIIIIII aaaaaaaa dddddddd
     frag = frag_more (1);
     number_to_chars_bigendian (frag, bin_opcode, 1);
-    fixup8 (op_expr1, I51_OP_IMM8, op1hlmode);
-    fixup8 (op_expr2, I51_OP_IMM8, op2hlmode);
+    fixup8 (expr1, I51_OP_IMM8, op1hlmode);
+    fixup8 (expr2, I51_OP_IMM8, op2hlmode);
     break;
 
   case 'J':			//bit, r. jump 8 bit           - IIIIIIII bbbbbbbb aaaaaaaa
     frag = frag_more (1);
     number_to_chars_bigendian (frag, bin_opcode, 1);
-    fixup8 (op_expr1, I51_OP_BIT, op1hlmode);
-    fixup8 (op_expr2, I51_OP_JUMP_REL, 0);
+    fixup8 (expr1, I51_OP_BIT, op1hlmode);
+    fixup8 (expr2, I51_OP_JUMP_REL, 0);
     break;
 
   case 'X':			//reg. indirect, r. jump 8 bit - IIIIIIIr dddddddd aaaaaaaa
@@ -1588,14 +1590,14 @@ i51_build_ins (
   case 'Z':			//data 8 bit, r. jump 8 bit    - IIIIIIII dddddddd aaaaaaaa
     frag = frag_more (1);
     number_to_chars_bigendian (frag, bin_opcode, 1);
-    fixup8 (op_expr1, I51_OP_IMM8, op1hlmode);
-    fixup8 (op_expr2, I51_OP_JUMP_REL, 0);
+    fixup8 (expr1, I51_OP_IMM8, op1hlmode);
+    fixup8 (expr2, I51_OP_JUMP_REL, 0);
     break;
 
   case '6':			//data/jump 16 bit             - IIIIIIII aaaaaaaa aaaaaaaa
     frag = frag_more (1);
     number_to_chars_bigendian (frag, bin_opcode, 1);
-    fixup16 (op_expr1, I51_OP_IMM16, 0);
+    fixup16 (expr1, I51_OP_IMM16, 0);
     break;
   }
 }
@@ -1634,7 +1636,7 @@ check_range (long num, int mode)
    unresolved symbols, generate an 8-bit fixup.  */
 static void
 fixup8 (
-     expressionS *oper,
+     expressionS *expr,
      int mode,
      int opmode)
 {
@@ -1642,61 +1644,61 @@ fixup8 (
 
   f = frag_more (1);
 
-  if (oper->X_op == O_constant)
+  if (expr->X_op == O_constant)
     {
       switch (opmode) {
       case I51_OP_HIGH_ADDR:
-	if (!check_range (oper->X_add_number, opmode))
+	if (!check_range (expr->X_add_number, opmode))
 	  {
 	    as_bad (_("hi_ Operand out of 8-bit range: `%ld'."),
-		    oper->X_add_number);
+		    expr->X_add_number);
 	  }
-	number_to_chars_bigendian (f, ((oper->X_add_number >> 8)) & 0xFF, 1);
+	number_to_chars_bigendian (f, ((expr->X_add_number >> 8)) & 0xFF, 1);
 	break;
       case I51_OP_LOW_ADDR:
-	if (!check_range (oper->X_add_number, opmode))
+	if (!check_range (expr->X_add_number, opmode))
 	  {
 	    as_bad (_("lo_ Operand out of 8-bit range: `%ld'."),
-		    oper->X_add_number);
+		    expr->X_add_number);
 	  }
-	number_to_chars_bigendian (f, (oper->X_add_number & 0xFF), 1);
+	number_to_chars_bigendian (f, (expr->X_add_number & 0xFF), 1);
 	break;
       case I51_OP_B2B:
-	if ((oper->X_add_number < 0x20) ||
-	    ((oper->X_add_number < 0x30) && (((oper->X_add_number - 0x20) * 8 + b2b_offset) > 0x80)) ||
-	    ((oper->X_add_number >= 0x30) && (oper->X_add_number < 0x80)) ||
-	    ((oper->X_add_number + b2b_offset) > 0x100) )
+	if ((expr->X_add_number < 0x20) ||
+	    ((expr->X_add_number < 0x30) && (((expr->X_add_number - 0x20) * 8 + b2b_offset) > 0x80)) ||
+	    ((expr->X_add_number >= 0x30) && (expr->X_add_number < 0x80)) ||
+	    ((expr->X_add_number + b2b_offset) > 0x100) )
 	  {
 	    as_bad (_("Operand out of bit range: B2B(%ld,%d)."),
-		    oper->X_add_number, b2b_offset);
+		    expr->X_add_number, b2b_offset);
 	  }
-	if (oper->X_add_number < 0x30)
+	if (expr->X_add_number < 0x30)
 	  {
-	    number_to_chars_bigendian (f, ((oper->X_add_number - 0x20) * 8 + b2b_offset), 1);
+	    number_to_chars_bigendian (f, ((expr->X_add_number - 0x20) * 8 + b2b_offset), 1);
 	  }
 	else
 	  {
-	    number_to_chars_bigendian (f, (oper->X_add_number + b2b_offset), 1);
+	    number_to_chars_bigendian (f, (expr->X_add_number + b2b_offset), 1);
 	  }
 	break;
       default:
-	if (!check_range (oper->X_add_number, mode))
+	if (!check_range (expr->X_add_number, mode))
 	  {
 	    as_bad (_("Operand out of 8-bit range: `%ld'."),
-		    oper->X_add_number);
+		    expr->X_add_number);
 	  }
-	number_to_chars_bigendian (f, (oper->X_add_number & 0xFF), 1);
+	number_to_chars_bigendian (f, (expr->X_add_number & 0xFF), 1);
 	break;
       }
     }
-  else if (oper->X_op != O_register)
+  else if (expr->X_op != O_register)
     {
       switch (mode) {
       case I51_OP_IMM8:
 	/* Now create an 8-bit fixup.  If there was some %hi or %lo
 	 modifier, generate the reloc accordingly.  */
 	fix_new_exp (frag_now, f - frag_now->fr_literal, 1,
-		     oper, FALSE,
+		     expr, FALSE,
 		     ((opmode & I51_OP_HIGH_ADDR)
 		      ? BFD_RELOC_I51_8_HIGH
 		      : ((opmode & I51_OP_LOW_ADDR)
@@ -1706,11 +1708,11 @@ fixup8 (
       case I51_OP_JUMP_REL:
 	/* Now create an 8-bit relative jump fixup */
 	fix_new_exp (frag_now, f - frag_now->fr_literal, 1,
-		     oper, TRUE, BFD_RELOC_I51_7_PCREL);
-	if (oper->X_op==O_symbol)
+		     expr, TRUE, BFD_RELOC_I51_7_PCREL);
+	if (expr->X_op==O_symbol)
 	  {
-	    //fprintf(stderr,"I51_OP_JUMP_REL with symbol %d %s %x %x %x \n",oper->X_op,S_GET_NAME (oper->X_add_symbol),oper->X_add_number,f,frag_now->fr_literal);
-	    //if (bfd_is_local_label_name (stdoutput, S_GET_NAME (oper->X_add_symbol))) fprintf(stderr,"is local\n");
+	    //fprintf(stderr,"I51_OP_JUMP_REL with symbol %d %s %x %x %x \n",expr->X_op,S_GET_NAME (expr->X_add_symbol),expr->X_add_number,f,frag_now->fr_literal);
+	    //if (bfd_is_local_label_name (stdoutput, S_GET_NAME (expr->X_add_symbol))) fprintf(stderr,"is local\n");
 	    //else
 	    //  fprintf(stderr,"is not local\n");
 	  }
@@ -1719,7 +1721,7 @@ fixup8 (
       case I51_OP_BIT:
 	/* Now create an 8-bit bit B2B area fixup */
 	fix_new_exp (frag_now, f - frag_now->fr_literal, 1,
-		     oper, FALSE,
+		     expr, FALSE,
 		     (opmode & I51_OP_B2B 
 		      ? BFD_RELOC_I51_8_B2B : BFD_RELOC_I51_8_BIT));
 	number_to_chars_bigendian (f, (opmode & I51_OP_B2B
@@ -1729,7 +1731,7 @@ fixup8 (
     }
   else
     {
-      as_fatal (_("Operand `%x' not recognized in fixup8."), oper->X_op);
+      as_fatal (_("Operand `%x' not recognized in fixup8."), expr->X_op);
     }
 }
 
@@ -1737,8 +1739,8 @@ fixup8 (
    unresolved symbols, generate an 11-bit fixup.  */
 static void
 fixup11 (
-     expressionS *oper,
-     unsigned int opcode,
+     expressionS *expr,
+     unsigned int op_code,
      int mode,
      int opmode ATTRIBUTE_UNUSED)
 {
@@ -1746,29 +1748,29 @@ fixup11 (
 
   f = frag_more (2);
 
-  if (oper->X_op == O_constant)
+  if (expr->X_op == O_constant)
     {
-      if (!check_range (oper->X_add_number, mode))
+      if (!check_range (expr->X_add_number, mode))
 	{
 	  as_bad (_("Operand out of 11-bit range: `%ld'."),
-		  oper->X_add_number);
+		  expr->X_add_number);
 	}
-      number_to_chars_bigendian (f, ((oper->X_add_number & 0x0700) << 5) | (opcode << 8) | (oper->X_add_number & 0x00FF), 2);
+      number_to_chars_bigendian (f, ((expr->X_add_number & 0x0700) << 5) | (op_code << 8) | (expr->X_add_number & 0x00FF), 2);
     }
-  else if (oper->X_op != O_register)
+  else if (expr->X_op != O_register)
     {
       switch (mode) {
       case I51_OP_JUMP_INPAGE:
 	/* Now create an 11-bit inpage jump fixup */
 	fix_new_exp (frag_now, f - frag_now->fr_literal, 1,
-		     oper, FALSE,BFD_RELOC_I51_11);
-	number_to_chars_bigendian (f, (opcode << 8), 2);
+		     expr, FALSE,BFD_RELOC_I51_11);
+	number_to_chars_bigendian (f, (op_code << 8), 2);
 	break;
       }
     }
   else
     {
-      as_fatal (_("Operand `%x' not recognized in fixup8."), oper->X_op);
+      as_fatal (_("Operand `%x' not recognized in fixup8."), expr->X_op);
     }
 }
 
@@ -1776,7 +1778,7 @@ fixup11 (
    unresolved symbols, generate a 16-bit fixup.  */
 static void
 fixup16 (
-     expressionS *oper,
+     expressionS *expr,
      int mode,
      int opmode ATTRIBUTE_UNUSED)
 {
@@ -1784,29 +1786,29 @@ fixup16 (
 
   f = frag_more (2);
 
-  if (oper->X_op == O_constant)
+  if (expr->X_op == O_constant)
     {
-      if (!check_range (oper->X_add_number, mode))
+      if (!check_range (expr->X_add_number, mode))
 	{
 	  as_bad (_("Operand out of 16-bit range: `%ld'."),
-		  oper->X_add_number);
+		  expr->X_add_number);
 	}
-      number_to_chars_bigendian (f, oper->X_add_number & 0x0FFFF, 2);
+      number_to_chars_bigendian (f, expr->X_add_number & 0x0FFFF, 2);
     }
-  else if (oper->X_op != O_register)
+  else if (expr->X_op != O_register)
     {
       fixS *fixp;
 
       /* Now create a 16-bit fixup.  */
       fixp = fix_new_exp (frag_now, f - frag_now->fr_literal, 2,
-			  oper,
+			  expr,
 			  FALSE,
 			  BFD_RELOC_16);
       number_to_chars_bigendian (f, 0, 2);
     }
   else
     {
-      as_fatal (_("Operand `%x' not recognized in fixup16."), oper->X_op);
+      as_fatal (_("Operand `%x' not recognized in fixup16."), expr->X_op);
     }
 }
 
@@ -2421,7 +2423,7 @@ i51_eeprom (int ignore ATTRIBUTE_UNUSED)
 
 void
 pcodeOperand (
-     expressionS *oper,
+     expressionS *exprS,
      enum PADRMODE *mode,
      int separator)
 {
@@ -2455,12 +2457,12 @@ pcodeOperand (
       else if (strncmp (input_line_pointer, "@",     1) == 0) { *mode = INDIRECTWORD; input_line_pointer += 1; }
       else                                                    { *mode = DIRECTWORD; }
       SKIP_WHITESPACE ();
-      expression (oper);
+      expression (exprS);
     }
   else
     {
-      oper->X_op = O_constant;
-      oper->X_add_number = 0;
+      exprS->X_op = O_constant;
+      exprS->X_add_number = 0;
       *mode = DIRECTBYTE;
     }
 }
@@ -2468,7 +2470,7 @@ pcodeOperand (
 
 void
 writePcodeOperand (
-     expressionS *oper,
+     expressionS *exprS,
      enum PADRMODE *mode,
      int swapable ATTRIBUTE_UNUSED)
 {
@@ -2481,12 +2483,12 @@ writePcodeOperand (
   case INDIRECTWORD:
   case INDIRECTSWAP:
     // byte mode
-      if (oper->X_op == O_constant)
+      if (exprS->X_op == O_constant)
 	{
-	  if (0x00FF & oper->X_add_number)
+	  if (0x00FF & exprS->X_add_number)
 	    {
 	      f = frag_more (1);
-	      number_to_chars_bigendian (f, 0x00FF & oper->X_add_number, 1);
+	      number_to_chars_bigendian (f, 0x00FF & exprS->X_add_number, 1);
 	    }
 	}
       else
@@ -2494,7 +2496,7 @@ writePcodeOperand (
 	  f = frag_more (1);
 	  /* Now create a 8-bit fixup. */
 	  fixp = fix_new_exp (frag_now, f - frag_now->fr_literal, 1,
-			      oper,
+			      exprS,
 			      FALSE,
 			      BFD_RELOC_8);
 	  number_to_chars_bigendian (f, 0, 1);
@@ -2502,12 +2504,12 @@ writePcodeOperand (
       break;
   case INDIRECTBYTE:
     // indirect byte mode
-      if (oper->X_op == O_constant)
+      if (exprS->X_op == O_constant)
 	{
-	  if (0x00FF & oper->X_add_number)
+	  if (0x00FF & exprS->X_add_number)
 	    {
 	      f = frag_more (1);
-	      number_to_chars_bigendian (f, 0x00FF & (oper->X_add_number - 1), 1);
+	      number_to_chars_bigendian (f, 0x00FF & (exprS->X_add_number - 1), 1);
 	    }
 	}
       else
@@ -2515,7 +2517,7 @@ writePcodeOperand (
 	  f = frag_more (1);
 	  /* Now create a 8-bit fixup. */
 	  fixp = fix_new_exp (frag_now, f - frag_now->fr_literal, 1,
-			      oper,
+			      exprS,
 			      FALSE,
 			      BFD_RELOC_8);
 	  number_to_chars_bigendian (f, -1, 1);
@@ -2523,17 +2525,17 @@ writePcodeOperand (
       break;
   case DIRECTWORD:
     // word mode
-    if (oper->X_op == O_constant)
+    if (exprS->X_op == O_constant)
       {
-	if (0xFF00 & oper->X_add_number)  //MSB
+	if (0xFF00 & exprS->X_add_number)  //MSB
 	  {
 	    f = frag_more (1);
-	    number_to_chars_bigendian (f, 0x00FF & (oper->X_add_number >> 8), 1);
+	    number_to_chars_bigendian (f, 0x00FF & (exprS->X_add_number >> 8), 1);
 	  }
-	if (0x00FF & oper->X_add_number)  //LSB
+	if (0x00FF & exprS->X_add_number)  //LSB
 	  {
 	    f = frag_more (1);
-	    number_to_chars_bigendian (f, 0x00FF & oper->X_add_number, 1);
+	    number_to_chars_bigendian (f, 0x00FF & exprS->X_add_number, 1);
 	  }
       }
     else
@@ -2541,7 +2543,7 @@ writePcodeOperand (
 	f = frag_more (2);
 	/* Now create a 16-bit fixup. */
 	fixp = fix_new_exp (frag_now, f - frag_now->fr_literal, 2,
-			    oper,
+			    exprS,
 			    FALSE,
 			    BFD_RELOC_16);
 	number_to_chars_bigendian (f, 0, 2);
@@ -2549,17 +2551,17 @@ writePcodeOperand (
     break;
   case DIRECTSWAP:
     //direct swap word mode
-    if (oper->X_op == O_constant)
+    if (exprS->X_op == O_constant)
       { //direct swap mode
-	if (0x00FF & oper->X_add_number)  //LSB
+	if (0x00FF & exprS->X_add_number)  //LSB
 	  {
 	    f = frag_more (1);
-	    number_to_chars_bigendian (f, 0x00FF & oper->X_add_number, 1);
+	    number_to_chars_bigendian (f, 0x00FF & exprS->X_add_number, 1);
 	  }
-	if (0xFF00 & oper->X_add_number)  //MSB
+	if (0xFF00 & exprS->X_add_number)  //MSB
 	  {
 	    f = frag_more (1);
-	    number_to_chars_bigendian (f, 0x00FF & (oper->X_add_number >> 8), 1);
+	    number_to_chars_bigendian (f, 0x00FF & (exprS->X_add_number >> 8), 1);
 	  }
       }
     else
@@ -2567,7 +2569,7 @@ writePcodeOperand (
 	f = frag_more (2);
 	/* Now create a 16-bit fixup. */
 	fixp = fix_new_exp (frag_now, f - frag_now->fr_literal, 2,
-			    oper,
+			    exprS,
 			    FALSE,
 			    BFD_RELOC_16);
 	number_to_chars_bigendian (f, 0, 2);
@@ -2578,7 +2580,7 @@ writePcodeOperand (
 
 unsigned short
 decodePcodeOperand (
-     expressionS *oper,
+     expressionS *exprS,
      enum PADRMODE *mode,
      int swapable)
 {
@@ -2590,14 +2592,14 @@ decodePcodeOperand (
   case DIRECTBYTE:
   case INDIRECTWORD:
   case INDIRECTBYTE:
-    if (oper->X_op == O_constant)
+    if (exprS->X_op == O_constant)
       {
-	if (!check_range (oper->X_add_number, I51_OP_IMM8))
+	if (!check_range (exprS->X_add_number, I51_OP_IMM8))
 	  {
 	    as_bad (_("operand out of 8-bit range: `%ld'."),
-		    oper->X_add_number);
+		    exprS->X_add_number);
 	  }
-	if (0x00FF & oper->X_add_number)
+	if (0x00FF & exprS->X_add_number)
 	  {
 	    pflags |= 0x40;
 	  }
@@ -2608,14 +2610,14 @@ decodePcodeOperand (
       }
     break;
   case INDIRECTSWAP:
-    if (oper->X_op == O_constant)
+    if (exprS->X_op == O_constant)
       {
-	if (!check_range (oper->X_add_number, I51_OP_IMM8))
+	if (!check_range (exprS->X_add_number, I51_OP_IMM8))
 	  {
 	    as_bad (_("operand out of 8-bit range: `%ld'."),
-		    oper->X_add_number);
+		    exprS->X_add_number);
 	  }
-	if (0x00FF & oper->X_add_number)
+	if (0x00FF & exprS->X_add_number)
 	  {
 	    pflags |= 0x40;   //allocate 8 bit
 	  }
@@ -2631,14 +2633,14 @@ decodePcodeOperand (
       }
     break;
   case DIRECTSHL8:
-    if (oper->X_op == O_constant)
+    if (exprS->X_op == O_constant)
       {
-	if (!check_range (oper->X_add_number, I51_OP_IMM8))
+	if (!check_range (exprS->X_add_number, I51_OP_IMM8))
 	  {
 	    as_bad (_("operand out of 8-bit range: `%ld'."),
-		    oper->X_add_number);
+		    exprS->X_add_number);
 	  }
-	if (0x00FF & oper->X_add_number)
+	if (0x00FF & exprS->X_add_number)
 	  {
 	    pflags |= 0x80;
 	  }
@@ -2650,16 +2652,16 @@ decodePcodeOperand (
     break;
   case DIRECTWORD:
     //word mode
-    if (oper->X_op == O_constant)
+    if (exprS->X_op == O_constant)
       {
-	if (!check_range (oper->X_add_number, I51_OP_IMM16))
+	if (!check_range (exprS->X_add_number, I51_OP_IMM16))
 	  {
 	    as_bad (_("operand out of 16-bit range: `%ld'."),
-		    oper->X_add_number);
+		    exprS->X_add_number);
 	  }
 	//direct no swap mode
-	if (0xFF00 & oper->X_add_number) pflags |= 0x80; //MSB
-	if (0x00FF & oper->X_add_number) pflags |= 0x40; //LSB
+	if (0xFF00 & exprS->X_add_number) pflags |= 0x80; //MSB
+	if (0x00FF & exprS->X_add_number) pflags |= 0x40; //LSB
       }
     else
       {
@@ -2668,16 +2670,16 @@ decodePcodeOperand (
     break;
   case DIRECTSWAP:
     //word mode
-    if (oper->X_op == O_constant)
+    if (exprS->X_op == O_constant)
       {
-	if (!check_range (oper->X_add_number, I51_OP_IMM16))
+	if (!check_range (exprS->X_add_number, I51_OP_IMM16))
 	  {
 	    as_bad (_("operand out of 16-bit range: `%ld'."),
-		    oper->X_add_number);
+		    exprS->X_add_number);
 	  }
 	//direct swap mode (#SWAP)
-	if (0x00FF & oper->X_add_number) pflags |= 0x80; //LSB
-	if (0xFF00 & oper->X_add_number) pflags |= 0x40; //MSB
+	if (0x00FF & exprS->X_add_number) pflags |= 0x80; //LSB
+	if (0xFF00 & exprS->X_add_number) pflags |= 0x40; //MSB
 	pflags |= 0x02;       //swap flag
       }
     else
