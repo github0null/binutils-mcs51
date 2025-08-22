@@ -21,8 +21,8 @@ MEMORY
 }
 
 /* end_addr -1 make sure the address always <= 65535 */
-__idata_end = (LENGTH(IDATA) > 0) ? (LENGTH(IDATA) - 1) : 0;
-__xdata_end = (LENGTH(XDATA) > 0) ? (LENGTH(XDATA) - 1) : 0;
+__idata_seg_end = (LENGTH(IDATA) > 0) ? (LENGTH(IDATA) - 1) : 0;
+__xdata_seg_end = (LENGTH(XDATA) > 0) ? (LENGTH(XDATA) - 1) : 0;
 
 SECTIONS
 {
@@ -99,10 +99,15 @@ SECTIONS
     *(.progmem.gcc*)
     *(.progmem*)
     *(.text)
+    ${RELOCATING+ PROVIDE (__xinit_start = .) ; }
+    KEEP(*(.text.xinit))
+    ${RELOCATING+ PROVIDE (__xinit_end = .) ; }
     *(.text.*)
     *(.fini)
     ${RELOCATING+ _etext = . ; }
   } ${RELOCATING+ > FLASH} :phdr_code
+
+  __xinit_size = __xinit_end - __xinit_start ;
 
   /*
     - [.reg        ] 00-1F   - 32 bytes to hold up to 4 banks of the registers R0 to R7,
@@ -152,9 +157,13 @@ SECTIONS
 
   .xdata ${RELOCATING+ 0} (NOLOAD):
   {
+    ${RELOCATING+ PROVIDE (__xdata_start = .) ; }
     *(.pdata*)
     *(.xdata*)
+    ${RELOCATING+ PROVIDE (__xdata_end = .) ; }
   } ${RELOCATING+ > XDATA}
+
+  __xdata_size = __xdata_end - __xdata_start ;
 
   .xbss ${RELOCATING+ SIZEOF(.xdata)} (NOLOAD):
   {
