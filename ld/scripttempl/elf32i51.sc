@@ -4,7 +4,13 @@ OUTPUT_ARCH(${ARCH})
 
 ENTRY(_reset_handler)
 
+/* Provide default sdcc weak symbols */
 PROVIDE(___sdcc_external_startup = 0x0000);
+
+/* Provide default size. User can override it by using --defsym=xxx option */
+PROVIDE(__FLASH_SIZE__ = 8192);
+PROVIDE(__IDATA_SIZE__ = 128);
+PROVIDE(__XDATA_SIZE__ = 0);
 
 PHDRS
 {
@@ -14,10 +20,11 @@ PHDRS
 
 MEMORY
 {
-  FLASH   (rx)   : ORIGIN = 0, LENGTH = DEFINED(__FLASH_SIZE__) ? __FLASH_SIZE__ : 8K
-  IDATA   (rw!x) : ORIGIN = 0, LENGTH = DEFINED(__IDATA_SIZE__) ? __IDATA_SIZE__ : 128
-  XDATA   (rw!x) : ORIGIN = 0, LENGTH = DEFINED(__XDATA_SIZE__) ? __XDATA_SIZE__ : 0
-  EEPROM  (rw!x) : ORIGIN = 0, LENGTH = DEFINED(__EPROM_SIZE__) ? __EPROM_SIZE__ : 0
+  FLASH   (rx)   : ORIGIN = 0, LENGTH = __FLASH_SIZE__
+  BITS    (rw!x) : ORIGIN = 0, LENGTH = 128
+  DATA    (rw!x) : ORIGIN = 0, LENGTH = 128
+  IDATA   (rw!x) : ORIGIN = 0, LENGTH = __IDATA_SIZE__
+  XDATA   (rw!x) : ORIGIN = 0, LENGTH = __XDATA_SIZE__
 }
 
 /* end_addr -1 make sure the address always <= 65535 */
@@ -99,9 +106,9 @@ SECTIONS
     *(.progmem.gcc*)
     *(.progmem*)
     *(.text)
-    ${RELOCATING+ PROVIDE (__xinit_start = .) ; }
+    ${RELOCATING+ PROVIDE(__xinit_start = .); }
     KEEP(*(.text.xinit))
-    ${RELOCATING+ PROVIDE (__xinit_end = .) ; }
+    ${RELOCATING+ PROVIDE(__xinit_end = .); }
     *(.text.*)
     *(.fini)
     ${RELOCATING+ _etext = . ; }
@@ -110,70 +117,58 @@ SECTIONS
   __xinit_size = __xinit_end - __xinit_start ;
 
   /*
-    - [.reg        ] 00-1F   - 32 bytes to hold up to 4 banks of the registers R0 to R7,
-    - [.bitdata ...] 20-2F   - 16 bytes to hold 128 bit variables and,
-    - [.data       ] 30-7F   - 80 bytes for general purpose use.
+    - [.reg  ] 00-1F   - 32 bytes to hold up to 4 banks of the registers R0 to R7,
+    - [.bit  ] 20-2F   - 16 bytes to hold 128 bit variables and,
+    - [.data ] 30-7F   - 80 bytes for general purpose use.
   */
 
-  .bdata ${RELOCATING+ 0x20} (NOLOAD):
+  .bit ${RELOCATING+ 0} (NOLOAD):
   {
+    . += 8 ; /* Reserve 1 byte for sdcc built-in 'bits' */
     *(.bitdata*)
-    *(.bdata*)
-  } ${RELOCATING+ > IDATA}
-
-  .bbss	${RELOCATING+ (SIZEOF(.bdata) + ADDR(.bdata))} (NOLOAD):
-  {
-    ${RELOCATING+ PROVIDE (__bbss_start = .) ; }
     *(.bitbss*)
-    *(.bbss*)
-    ${RELOCATING+ PROVIDE (__bbss_end = .) ; }
-  } ${RELOCATING+ > IDATA}
+  } ${RELOCATING+ > BITS}
 
-  ASSERT (__bbss_end <= 0x2F, "bit data region overflowed.")
-
-  .data	${RELOCATING+ (SIZEOF(.bbss) + ADDR(.bbss))} (NOLOAD):
+  .data	${RELOCATING+ 0} (NOLOAD):
   {
+    . += 0x20 ; /* Reserve space for the work registers R0 to R7 */
+    . += (SIZEOF(.bit) + 7) / 8 ; /* Reserve space for the '.bit' section */
     *(.data*)
     *(.gnu.linkonce.d*)
-  } ${RELOCATING+ > IDATA}
-
-  .bss ${RELOCATING+ (SIZEOF(.data) + ADDR(.data))} (NOLOAD):
-  {
     *(.bss*)
     *(COMMON)
-  } ${RELOCATING+ > IDATA}
+  } ${RELOCATING+ > DATA}
 
-  .idata ${RELOCATING+ (SIZEOF(.bss) + ADDR(.bss))} (NOLOAD):
+  .idata ${RELOCATING+ 0} (NOLOAD):
   {
+    . += SIZEOF(.data) ;
     *(.idata*)
+    *(.ibss*)
+    ${RELOCATING+ __start__stack = . ; }
   } ${RELOCATING+ > IDATA}
 
-  .ibss ${RELOCATING+ (SIZEOF(.idata) + ADDR(.idata))} (NOLOAD):
-  {
-    *(.ibss*)
-    ${RELOCATING+ PROVIDE (__start__stack = .) ; }
-    *(.stack)
-  } ${RELOCATING+ > IDATA}
+  ASSERT ((LENGTH(IDATA) - SIZEOF(.idata)) >= 20, "error: No space left for the stack, at least 20 bytes.")
 
   .xdata ${RELOCATING+ 0} (NOLOAD):
   {
-    ${RELOCATING+ PROVIDE (__xdata_start = .) ; }
     *(.pdata*)
+    ${RELOCATING+ PROVIDE(__xdata_start = .); }
     *(.xdata*)
-    ${RELOCATING+ PROVIDE (__xdata_end = .) ; }
-  } ${RELOCATING+ > XDATA}
-
-  __xdata_size = __xdata_end - __xdata_start ;
-
-  .xbss ${RELOCATING+ SIZEOF(.xdata)} (NOLOAD):
-  {
+    ${RELOCATING+ PROVIDE(__xdata_end = .); }
     *(.xbss*)
   } ${RELOCATING+ > XDATA}
 
-  .eeprom ${RELOCATING+ 0} (NOLOAD):
+  /* initialized xdata size */
+  __xdata_size = __xdata_end - __xdata_start ;
+  /* total xdata size, we will clear it to zero */
+  __xdata_clear_end = (SIZEOF(.xdata) > 0) ? (SIZEOF(.xdata) - 1) : 0 ;
+
+  /* dummy section just used to generate warnings */
+  .abs_dummy ${RELOCATING+ 0} (NOLOAD):
   {
-    *(.eeprom*)
-  } ${RELOCATING+ > EEPROM}
+    KEEP(*(.abs*))
+  }
+  ASSERT (SIZEOF(.abs_dummy) == 0, "error: Do not define ABS variables in your code. Please use linker script instead.")
 
   /* Stabs debugging sections.  */
   .stab 0 : { *(.stab) }
