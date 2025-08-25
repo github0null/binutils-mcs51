@@ -151,17 +151,25 @@ SECTIONS
 
   .xdata ${RELOCATING+ 0} (NOLOAD):
   {
-    *(.pdata*)
+    KEEP(*(.pdata*))
     ${RELOCATING+ PROVIDE(__xdata_start = .); }
-    *(.xdata*)
+    KEEP(*(.xdata*))
     ${RELOCATING+ PROVIDE(__xdata_end = .); }
     *(.xbss*)
   } ${RELOCATING+ > XDATA}
 
-  /* initialized xdata size */
-  __xdata_size = __xdata_end - __xdata_start ;
-  /* total xdata size, we will clear it to zero */
-  __xdata_clear_end = (SIZEOF(.xdata) > 0) ? (SIZEOF(.xdata) - 1) : 0 ;
+  /* indicate the copy/clear address is overflowed (address > 0xFFFF ?)
+      0: not
+      1: clear end address is overflowed
+      2: clear xdata/copy end address is overflowed
+  */
+  __xdata_ov_flag = (__xdata_end - __xdata_start > 0xFFFF) ? 2 : (SIZEOF(.xdata) > 0xFFFF) ;
+  /* determine if we need copy xdata from flash */
+  __xdata_has_copy = (__xdata_end - __xdata_start) > 0 ;
+  /* xdata copy end address (contain end address) */
+  __xdata_copy_end = (__xdata_end > 0xFFFF) ? 0xFFFF : __xdata_end ;
+  /* xdata clear-zero end address (contain end address) */
+  __xdata_clear_end = SIZEOF(.xdata) > 0xFFFF ? 0xFFFF : SIZEOF(.xdata) ;
 
   /* dummy section just used to generate warnings */
   .abs_dummy ${RELOCATING+ 0} (NOLOAD):
