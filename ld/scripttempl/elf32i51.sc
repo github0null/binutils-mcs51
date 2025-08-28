@@ -129,19 +129,18 @@ SECTIONS
     *(.bitbss*)
   } ${RELOCATING+ > BITS}
 
-  .data	${RELOCATING+ 0} (NOLOAD):
+  .bss ${RELOCATING+ 0} (NOLOAD):
   {
     . += 0x20 ; /* Reserve space for the work registers R0 to R7 */
     . += (SIZEOF(.bit) + 7) / 8 ; /* Reserve space for the '.bit' section */
-    *(.data*)
-    *(.gnu.linkonce.d*)
     *(.bss*)
+    *(.gnu.linkonce.d*)
     *(COMMON)
   } ${RELOCATING+ > DATA}
 
   .idata ${RELOCATING+ 0} (NOLOAD):
   {
-    . += SIZEOF(.data) ;
+    . += SIZEOF(.bss) ;
     *(.idata*)
     *(.ibss*)
     ${RELOCATING+ __start__stack = . ; }
